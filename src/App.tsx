@@ -59,6 +59,7 @@ function App() {
   useEffect(() => {
     init();
   }, []);
+
   return (
     <>
       <GlobalStyles />
