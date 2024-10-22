@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import LoadingScreen from "./components/LoadingScreen";
 import { auth } from "./firebase";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PasswordReset from "./routes/PasswordReset";
 
 const Wrapper = styled.div`
   height: 100vh;
@@ -43,6 +44,10 @@ const routes = [
   {
     path: "/create-account",
     element: <CreateAccount />,
+  },
+  {
+    path: "/password-reset",
+    element: <PasswordReset />,
   },
 ];
 

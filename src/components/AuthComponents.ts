@@ -7,6 +7,7 @@ export const Wrapper = styled.div`
   align-items: center;
   width: 420px;
   padding: 50px 0px;
+  margin: 0px 20px;
 `;
 export const Title = styled.h1`
   font-size: 42px;
@@ -27,6 +28,8 @@ export const Input = styled.input`
   font-size: 16px;
   &[type="submit"] {
     cursor: pointer;
+    background-color: #1d9bf0;
+    color: white;
     &:hover {
       opacity: 0.8;
     }

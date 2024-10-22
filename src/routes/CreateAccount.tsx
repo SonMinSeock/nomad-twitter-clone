@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
 import { useState } from "react";
 import { auth } from "../firebase";
 import { Link, useNavigate } from "react-router-dom";
@@ -20,6 +20,7 @@ function CreateAccount() {
     try {
       setIsLoading(true);
       const credentials = await createUserWithEmailAndPassword(auth, email, password);
+      await sendEmailVerification(credentials.user);
       await updateProfile(credentials.user, {
         displayName: name,
       });
