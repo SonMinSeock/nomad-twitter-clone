@@ -1,8 +1,11 @@
+import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 
 function Home() {
+  const navigate = useNavigate();
   const logOut = async () => {
     await auth.signOut();
+    navigate("/login");
   };
   return (
     <>
