@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { auth } from "../firebase";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { FirebaseError } from "firebase/app";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { Form, Error, Input, Switcher, Title, Wrapper } from "../components/AuthComponents";
-import GithubBtn from "../components/GithubBtn";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { Form, Error, Input, Title, Wrapper } from "../components/AuthComponents";
 
-function Login() {
+function PasswordRest() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,12 +18,14 @@ function Login() {
     if (isLoading || email === "" || password === "") return;
     try {
       setIsLoading(true);
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate("/");
+      await sendPasswordResetEmail(auth, email);
+      alert("해당 계정으로 비밀번호 재설정 링크를 보냈습니다!");
+      navigate("/login");
     } catch (e) {
       if (e instanceof FirebaseError) {
         setError(e.message);
       }
+      // setError
     } finally {
       setIsLoading(false);
     }
@@ -41,23 +42,22 @@ function Login() {
   return (
     <>
       <Wrapper>
-        <Title>Log into 𝕏</Title>
+        <Title>비밀번호 재설정 𝕏</Title>
         <Form onSubmit={onSubmit}>
-          <Input type="email" name="email" value={email} onChange={onChange} placeholder="이메일" required />
-          <Input type="password" name="password" value={password} onChange={onChange} placeholder="비밀번호" required />
-          <Input type="submit" value={isLoading ? "Loading..." : "로그인"} />
+          <Input
+            type="email"
+            name="email"
+            value={email}
+            onChange={onChange}
+            placeholder="재설정할 비밀번호인 이메일 작성하세요"
+            required
+          />
+          <Input type="submit" value={isLoading ? "Loading..." : "재설정 메일 보내기"} />
         </Form>
         {error !== "" ? <Error>{error}</Error> : null}
-        <Switcher>
-          계정이 없으세요? <Link to="/create-account">회원가입 &rarr;</Link>
-        </Switcher>
-        <Switcher>
-          비밀번호 잊어버리셨나요? <Link to="/password-reset">비밀번호 재설정 &rarr;</Link>
-        </Switcher>
-        <GithubBtn />
       </Wrapper>
     </>
   );
 }
 
-export default Login;
+export default PasswordRest;
