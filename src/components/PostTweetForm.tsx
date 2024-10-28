@@ -1,7 +1,8 @@
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, updateDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import styled from "styled-components";
-import { auth, db } from "../firebase";
+import { auth, db, storage } from "../firebase";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 const Form = styled.form`
   display: flex;
@@ -70,8 +71,13 @@ function PostTweetForm() {
 
   const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { files } = event.target;
+    // 1mb -> 1 * 1024 * 1024 = 1048576
     if (files && files.length === 1) {
-      setFile(files[0]);
+      if (files[0].size < 1 * 1024 * 1024) {
+        setFile(files[0]);
+      } else {
+        alert("이미지 크기가 큽니다(1mb 이내 업로드 가능)");
+      }
     }
   };
 
@@ -82,12 +88,24 @@ function PostTweetForm() {
     if (!user || isLoading || tweet === "" || tweet.length > 180) return;
     try {
       setIsLoading(true);
-      await addDoc(collection(db, "tweets"), {
+      const doc = await addDoc(collection(db, "tweets"), {
         tweet,
         createdAt: Date.now(),
         username: user.displayName || "익명",
         userId: user.uid,
       });
+
+      if (file) {
+        const locationRef = ref(storage, `tweets/${user.uid}-${user.displayName}/${doc.id}`);
+        const result = await uploadBytes(locationRef, file);
+        const url = await getDownloadURL(result.ref);
+        await updateDoc(doc, {
+          photo: url,
+        });
+      }
+
+      setTweet("");
+      setFile(null);
     } catch (error) {
       console.log(error);
     } finally {
@@ -97,7 +115,14 @@ function PostTweetForm() {
 
   return (
     <Form onSubmit={onSubmit}>
-      <TextArea value={tweet} onChange={onChange} placeholder="무엇을 작성하고 싶나요?" rows={5} maxLength={180} />
+      <TextArea
+        value={tweet}
+        required
+        onChange={onChange}
+        placeholder="무엇을 작성하고 싶나요?"
+        rows={5}
+        maxLength={180}
+      />
       <AttatchFileButton htmlFor="file">{file ? "이미지 추가 성공 ✅" : "이미지 추가"}</AttatchFileButton>
       <AttatchFileInput type="file" id="file" accept="image/*" onChange={onFileChange} />
       <SubmitBtn type="submit" value={isLoading ? "게시글 게시중..." : "게시글 작성"} />
