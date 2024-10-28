@@ -1,5 +1,7 @@
+import { addDoc, collection } from "firebase/firestore";
 import React, { useState } from "react";
 import styled from "styled-components";
+import { auth, db } from "../firebase";
 
 const Form = styled.form`
   display: flex;
@@ -73,8 +75,28 @@ function PostTweetForm() {
     }
   };
 
+  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const user = auth.currentUser;
+
+    if (!user || isLoading || tweet === "" || tweet.length > 180) return;
+    try {
+      setIsLoading(true);
+      await addDoc(collection(db, "tweets"), {
+        tweet,
+        createdAt: Date.now(),
+        username: user.displayName || "익명",
+        userId: user.uid,
+      });
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <Form>
+    <Form onSubmit={onSubmit}>
       <TextArea value={tweet} onChange={onChange} placeholder="무엇을 작성하고 싶나요?" rows={5} maxLength={180} />
       <AttatchFileButton htmlFor="file">{file ? "이미지 추가 성공 ✅" : "이미지 추가"}</AttatchFileButton>
       <AttatchFileInput type="file" id="file" accept="image/*" onChange={onFileChange} />
