@@ -1,18 +1,11 @@
-import { collection, getDocs, limit, onSnapshot, orderBy, query } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { collection, limit, onSnapshot, orderBy, query } from "firebase/firestore";
+import { useEffect } from "react";
 import styled from "styled-components";
 import { db } from "../firebase";
 import Tweet from "../components/Tweet";
 import { Unsubscribe } from "firebase/auth";
-
-export interface ITweet {
-  username: string;
-  tweet: string;
-  userId: string;
-  photo?: string;
-  createdAt: number;
-  id: string;
-}
+import { ITweet, tweetsAtom } from "../recoil/tweet-atom";
+import { useRecoilState } from "recoil";
 
 const Wrapper = styled.div`
   display: flex;
@@ -22,7 +15,7 @@ const Wrapper = styled.div`
 `;
 
 function Timeline() {
-  const [tweets, setTweets] = useState<ITweet[]>([]);
+  const [tweets, setTweets] = useRecoilState<ITweet[]>(tweetsAtom);
 
   /*
   // getDocs : 문서들 읽어오기

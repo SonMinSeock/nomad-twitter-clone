@@ -1,8 +1,10 @@
-import { addDoc, collection, updateDoc } from "firebase/firestore";
-import React, { useState } from "react";
+import { addDoc, collection, doc, updateDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { auth, db, storage } from "../firebase";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { useRecoilState } from "recoil";
+import { editTweetAtom } from "../recoil/tweet-atom";
 
 const Form = styled.form`
   display: flex;
@@ -60,10 +62,26 @@ const SubmitBtn = styled.input`
   }
 `;
 
+const CancleBtn = styled.button`
+  background-color: #d3d3d3;
+  color: #000000;
+  border: none;
+  padding: 10px 0px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover,
+  &:active {
+    opacity: 0.9;
+  }
+`;
+
 function PostTweetForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const [tweet, setTweet] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [editTweet, setEditTweet] = useRecoilState(editTweetAtom);
+  const [tweet, setTweet] = useState("");
 
   const onChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setTweet(event.target.value);
@@ -86,46 +104,117 @@ function PostTweetForm() {
     const user = auth.currentUser;
 
     if (!user || isLoading || tweet === "" || tweet.length > 180) return;
-    try {
-      setIsLoading(true);
-      const doc = await addDoc(collection(db, "tweets"), {
-        tweet,
-        createdAt: Date.now(),
-        username: user.displayName || "익명",
-        userId: user.uid,
-      });
-
-      if (file) {
-        const locationRef = ref(storage, `tweets/${user.uid}/${doc.id}`);
-        const result = await uploadBytes(locationRef, file);
-        const url = await getDownloadURL(result.ref);
-        await updateDoc(doc, {
-          photo: url,
+    if (!editTweet) {
+      try {
+        setIsLoading(true);
+        const doc = await addDoc(collection(db, "tweets"), {
+          tweet,
+          createdAt: Date.now(),
+          username: user.displayName || "익명",
+          userId: user.uid,
         });
-      }
 
-      setTweet("");
-      setFile(null);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setIsLoading(false);
+        if (file) {
+          const locationRef = ref(storage, `tweets/${user.uid}/${doc.id}`);
+          const result = await uploadBytes(locationRef, file);
+          const url = await getDownloadURL(result.ref);
+          await updateDoc(doc, {
+            photo: url,
+          });
+        }
+
+        setTweet("");
+        setFile(null);
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      try {
+        setIsLoading(true);
+        const docRef = doc(db, "tweets", editTweet.id);
+        if (tweet !== editTweet.tweet) {
+          await updateDoc(docRef, {
+            tweet,
+          });
+        }
+
+        if (file) {
+          const locationRef = ref(storage, `tweets/${user.uid}/${editTweet.id}`);
+          if (!editTweet.photo) {
+            const result = await uploadBytes(locationRef, file);
+            const url = await getDownloadURL(result.ref);
+            await updateDoc(docRef, {
+              photo: url,
+            });
+          } else {
+            await deleteObject(locationRef);
+            const result = await uploadBytes(locationRef, file);
+            const url = await getDownloadURL(result.ref);
+            await updateDoc(docRef, {
+              photo: url,
+            });
+          }
+        }
+
+        setTweet("");
+        setFile(null);
+        setEditTweet(null);
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
+  const onEditCancle = () => {
+    setEditTweet(null);
+    setTweet("");
+    if (file) {
+      setFile(null);
+    }
+  };
+
+  useEffect(() => {
+    if (editTweet) {
+      setTweet(editTweet.tweet);
+    }
+  }, [editTweet]);
+
   return (
     <Form onSubmit={onSubmit}>
-      <TextArea
-        value={tweet}
-        required
-        onChange={onChange}
-        placeholder="무엇을 작성하고 싶나요?"
-        rows={5}
-        maxLength={180}
-      />
-      <AttatchFileButton htmlFor="file">{file ? "이미지 추가 성공 ✅" : "이미지 추가"}</AttatchFileButton>
-      <AttatchFileInput type="file" id="file" accept="image/*" onChange={onFileChange} />
-      <SubmitBtn type="submit" value={isLoading ? "게시글 게시중..." : "게시글 작성"} />
+      {!editTweet ? (
+        <>
+          <TextArea
+            value={tweet}
+            required
+            onChange={onChange}
+            placeholder="무엇을 작성하고 싶나요?"
+            rows={5}
+            maxLength={180}
+          />
+          <AttatchFileButton htmlFor="file">{file ? "이미지 추가 성공 ✅" : "이미지 추가"}</AttatchFileButton>
+          <AttatchFileInput type="file" id="file" accept="image/*" onChange={onFileChange} />
+          <SubmitBtn type="submit" value={isLoading ? "게시글 게시중..." : "게시글 작성"} />
+        </>
+      ) : (
+        <>
+          <TextArea
+            value={tweet}
+            required
+            onChange={onChange}
+            placeholder="무엇을 작성하고 싶나요?"
+            rows={5}
+            maxLength={180}
+          />
+          <AttatchFileButton htmlFor="file">{file ? "이미지 수정 성공 ✅" : "이미지 수정"}</AttatchFileButton>
+          <AttatchFileInput type="file" id="file" accept="image/*" onChange={onFileChange} />
+          <SubmitBtn type="submit" value={isLoading ? "게시글 게시중..." : "게시글 수정"} />
+          <CancleBtn onClick={onEditCancle}>수정 취소</CancleBtn>
+        </>
+      )}
     </Form>
   );
 }

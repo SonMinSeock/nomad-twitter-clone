@@ -1,8 +1,9 @@
 import styled from "styled-components";
-import { ITweet } from "../routes/Timeline";
 import { auth, db, storage } from "../firebase";
 import { deleteDoc, doc } from "firebase/firestore";
 import { deleteObject, ref } from "firebase/storage";
+import { editTweetAtom, ITweet } from "../recoil/tweet-atom";
+import { useRecoilState } from "recoil";
 
 const Wrapper = styled.div`
   display: grid;
@@ -46,7 +47,13 @@ const DeleteBtn = styled.button`
   cursor: pointer;
 `;
 
-function Tweet({ username, photo, tweet, userId, id }: ITweet) {
+const BtnController = styled.div`
+  display: flex;
+  gap: 10px;
+`;
+
+function Tweet({ username, photo, tweet, userId, id, createdAt }: ITweet) {
+  const [editTweet, setEditTweet] = useRecoilState(editTweetAtom);
   const user = auth.currentUser;
   const onDelete = async () => {
     const ok = confirm("해당 게시글 삭제 하시겠습니까?");
@@ -57,10 +64,22 @@ function Tweet({ username, photo, tweet, userId, id }: ITweet) {
       if (photo) {
         const photoRef = ref(storage, `tweets/${userId}/${id}`);
         await deleteObject(photoRef);
+        if (!editTweet) {
+          setEditTweet(null);
+        }
       }
     } catch (error) {
       console.log(error);
     } finally {
+    }
+  };
+
+  const onEdit = () => {
+    const targetEditTweet = { username, tweet, userId, id, createdAt };
+    if (photo) {
+      setEditTweet({ ...targetEditTweet, photo });
+    } else {
+      setEditTweet(targetEditTweet);
     }
   };
   return (
@@ -68,7 +87,10 @@ function Tweet({ username, photo, tweet, userId, id }: ITweet) {
       <Column>
         <Username>{username}</Username>
         <Payload>{tweet}</Payload>
-        {user?.uid === userId ? <DeleteBtn onClick={onDelete}>삭제</DeleteBtn> : null}
+        <BtnController>
+          {user?.uid === userId ? <DeleteBtn onClick={onEdit}>편집</DeleteBtn> : null}
+          {user?.uid === userId ? <DeleteBtn onClick={onDelete}>삭제</DeleteBtn> : null}
+        </BtnController>
       </Column>
       <Column>{photo ? <Photo src={photo} /> : null}</Column>
     </Wrapper>

@@ -1,6 +1,9 @@
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { auth } from "../firebase";
+import { useEffect } from "react";
+import { useRecoilState } from "recoil";
+import { editTweetAtom } from "../recoil/tweet-atom";
 
 const Wrapper = styled.div`
   display: grid;
@@ -39,6 +42,7 @@ const MenuItem = styled.div`
 `;
 
 function Layout() {
+  const [editTweet, setEditTweet] = useRecoilState(editTweetAtom);
   const navigate = useNavigate();
   const onLogOut = async () => {
     const ok = confirm("로그아웃 하실 건가요?");
@@ -47,6 +51,13 @@ function Layout() {
       navigate("/login");
     }
   };
+
+  useEffect(() => {
+    // Reset editTweet state whenever the route changes
+
+    setEditTweet(null);
+  }, [location.pathname]);
+
   return (
     <Wrapper>
       <Menu>
