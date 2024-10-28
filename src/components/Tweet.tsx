@@ -34,14 +34,7 @@ function Tweet({ username, photo, tweet }: ITweet) {
         <Username>{username}</Username>
         <Payload>{tweet}</Payload>
       </Column>
-      <Column>
-        {photo ? (
-          <Column>
-            {" "}
-            <Photo src={photo} />{" "}
-          </Column>
-        ) : null}
-      </Column>
+      <Column>{photo ? <Photo src={photo} /> : null}</Column>
     </Wrapper>
   );
 }
