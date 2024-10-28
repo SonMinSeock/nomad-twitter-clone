@@ -1,8 +1,13 @@
+import styled from "styled-components";
+import PostTweetForm from "../components/PostTweetForm";
+
+const Wrapper = styled.div``;
+
 function Home() {
   return (
-    <>
-      <h1>Home</h1>
-    </>
+    <Wrapper>
+      <PostTweetForm />
+    </Wrapper>
   );
 }
 
