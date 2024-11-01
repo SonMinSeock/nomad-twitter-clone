@@ -1,18 +1,25 @@
-import { useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
+import styled from "styled-components";
+import PostTweetForm from "../components/PostTweetForm";
+import Timeline from "./Timeline";
+import { useEffect } from "react";
+import { useRecoilState } from "recoil";
+import { editTweetAtom } from "../recoil/tweet-atom";
+
+const Wrapper = styled.div`
+  display: grid;
+  gap: 50px;
+  overflow-y: scroll;
+  grid-template-rows: 1fr 5fr;
+`;
 
 function Home() {
-  const navigate = useNavigate();
-  const logOut = async () => {
-    await auth.signOut();
-    navigate("/login");
-  };
+  const [editTweet, setEditTweet] = useRecoilState(editTweetAtom);
+
   return (
-    <>
-      <h1>
-        <button onClick={logOut}>로그아웃</button>
-      </h1>
-    </>
+    <Wrapper>
+      <PostTweetForm />
+      <Timeline />
+    </Wrapper>
   );
 }
 
