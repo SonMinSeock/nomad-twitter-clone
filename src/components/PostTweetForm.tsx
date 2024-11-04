@@ -5,6 +5,7 @@ import { auth, db, storage } from "../firebase";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useRecoilState } from "recoil";
 import { editTweetAtom } from "../recoil/tweet-atom";
+import { useLocation } from "react-router-dom";
 
 const Form = styled.form`
   display: flex;
@@ -78,6 +79,7 @@ const CancleBtn = styled.button`
 `;
 
 function PostTweetForm() {
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [editTweet, setEditTweet] = useRecoilState(editTweetAtom);
@@ -160,6 +162,7 @@ function PostTweetForm() {
 
         setTweet("");
         setFile(null);
+        location.state = null;
         setEditTweet(null);
       } catch (error) {
         console.log(error);
@@ -172,16 +175,20 @@ function PostTweetForm() {
   const onEditCancle = () => {
     setEditTweet(null);
     setTweet("");
+    location.state = null;
     if (file) {
       setFile(null);
     }
   };
 
   useEffect(() => {
-    if (editTweet) {
+    if (location.state?.editTweet) {
+      setEditTweet(location.state.editTweet);
+      setTweet(location.state.editTweet.tweet);
+    } else if (editTweet) {
       setTweet(editTweet.tweet);
     }
-  }, [editTweet]);
+  }, [location.state, editTweet]);
 
   return (
     <Form onSubmit={onSubmit}>

@@ -4,6 +4,7 @@ import { deleteDoc, doc } from "firebase/firestore";
 import { deleteObject, ref } from "firebase/storage";
 import { editTweetAtom, ITweet } from "../recoil/tweet-atom";
 import { useRecoilState } from "recoil";
+import { useNavigate } from "react-router-dom";
 
 const Wrapper = styled.div`
   display: grid;
@@ -53,6 +54,7 @@ const BtnController = styled.div`
 `;
 
 function Tweet({ username, photo, tweet, userId, id, createdAt }: ITweet) {
+  const navigate = useNavigate();
   const [editTweet, setEditTweet] = useRecoilState(editTweetAtom);
   const user = auth.currentUser;
   const onDelete = async () => {
@@ -70,10 +72,8 @@ function Tweet({ username, photo, tweet, userId, id, createdAt }: ITweet) {
       }
     } catch (error) {
       console.log(error);
-    } finally {
     }
   };
-
   const onEdit = () => {
     const targetEditTweet = { username, tweet, userId, id, createdAt };
     if (photo) {
@@ -81,7 +81,9 @@ function Tweet({ username, photo, tweet, userId, id, createdAt }: ITweet) {
     } else {
       setEditTweet(targetEditTweet);
     }
+    navigate("/", { state: { editTweet: targetEditTweet } });
   };
+
   return (
     <Wrapper>
       <Column>

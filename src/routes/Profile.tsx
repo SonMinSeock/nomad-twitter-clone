@@ -1,9 +1,9 @@
 import styled from "styled-components";
 import { auth, db, storage } from "../firebase";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { updateProfile } from "firebase/auth";
-import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore";
+import { Unsubscribe, updateProfile } from "firebase/auth";
+import { collection, getDocs, limit, onSnapshot, orderBy, query, updateDoc, where } from "firebase/firestore";
 import { ITweet } from "../recoil/tweet-atom";
 import Tweet from "../components/Tweet";
 
@@ -49,10 +49,65 @@ const Tweets = styled.div`
   gap: 10px;
 `;
 
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const Input = styled.input`
+  border: 2px solid white;
+  border-radius: 20px;
+  padding: 10px;
+  font-size: 22px;
+  color: white;
+  background-color: black;
+  &::placeholder {
+    font-size: 22px;
+  }
+  &:focus {
+    outline: none;
+    border-color: #1d9bf0;
+  }
+`;
+
+const SubmitBtn = styled.button`
+  background-color: #1d9bf0;
+  color: white;
+  border: none;
+  padding: 10px 0px;
+  border-radius: 20px;
+  font-size: 22px;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover,
+  &:active {
+    opacity: 0.9;
+  }
+`;
+
+const EditCancleBtn = styled(SubmitBtn)`
+  background-color: tomato;
+`;
+
+const EditBtn = styled.button`
+  background-color: tomato;
+  color: white;
+  font-weight: 600;
+  font-size: 12px;
+  border: 0;
+  padding: 5px 10px;
+  text-transform: uppercase;
+  border-radius: 5px;
+  cursor: pointer;
+`;
+
 function Profile() {
   const user = auth.currentUser;
   const [avatar, setAvatar] = useState(user?.photoURL);
   const [tweets, setTweets] = useState<ITweet[]>([]);
+  const [isNameEdit, setIsNameEdit] = useState(false);
+  const [userName, setUserName] = useState(user?.displayName);
 
   const onAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const { files } = event.target;
@@ -69,30 +124,82 @@ function Profile() {
     }
   };
 
-  const fetchTweets = async () => {
-    const tweetQuery = query(
-      collection(db, "tweets"),
-      where("userId", "==", user?.uid),
-      orderBy("createdAt", "desc"),
-      limit(25)
-    );
-    const snapshot = await getDocs(tweetQuery);
-    const tweetsData = snapshot.docs.map((doc) => {
-      const { tweet, createdAt, userId, username, photo } = doc.data();
-      return {
-        tweet,
-        createdAt,
-        userId,
-        username,
-        photo,
-        id: doc.id,
-      };
-    });
-    setTweets(tweetsData);
+  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!user) return;
+
+    if (!userName || userName.trim().length === 0) {
+      alert("이름을 입력하세요");
+      return;
+    }
+
+    try {
+      const queryTweet = query(collection(db, "tweets"), where("userId", "==", user?.uid));
+      const snapshot = await getDocs(queryTweet);
+
+      snapshot.forEach(async (docSnapshot) => {
+        const docRef = docSnapshot.ref;
+        await updateDoc(docRef, {
+          username: userName,
+        });
+      });
+
+      await updateProfile(user, {
+        displayName: userName,
+      });
+
+      alert("사용자 이름이 성공적으로 업데이트되었습니다.");
+      setIsNameEdit(false);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
+  const userNameOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const {
+      target: { value },
+    } = event;
+
+    setUserName(value);
+  };
+
+  const toggleNameEdit = () => setIsNameEdit((prev) => !prev);
+
   useEffect(() => {
+    let unsubscribe: Unsubscribe | null = null;
+
+    const fetchTweets = async () => {
+      const tweetQuery = query(
+        collection(db, "tweets"),
+        where("userId", "==", user?.uid),
+        orderBy("createdAt", "desc"),
+        limit(25)
+      );
+
+      unsubscribe = await onSnapshot(tweetQuery, (snapshot) => {
+        const tweetsData = snapshot.docs.map((doc) => {
+          const { tweet, createdAt, userId, username, photo } = doc.data();
+          return {
+            tweet,
+            createdAt,
+            userId,
+            username,
+            photo,
+            id: doc.id,
+          };
+        });
+
+        setTweets(tweetsData);
+      });
+    };
+
     fetchTweets();
+
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      unsubscribe && unsubscribe();
+    };
   }, []);
 
   return (
@@ -107,8 +214,23 @@ function Profile() {
         )}
       </AvatarUpload>
       <AvatarInput id="avatar" type="file" accept="image/*" onChange={onAvatarChange} />
-
-      <Name>{user?.displayName ? user.displayName : "익명"}</Name>
+      {!isNameEdit ? (
+        <Name>{user?.displayName ? user.displayName : "익명"}</Name>
+      ) : (
+        <Form onSubmit={onSubmit}>
+          <Input
+            type="text"
+            placeholder="수정 할 이름을 작성하세요"
+            value={userName ? userName : ""}
+            onChange={userNameOnChange}
+          />
+          <SubmitBtn>수정 완료</SubmitBtn>
+          <EditCancleBtn type="button" onClick={toggleNameEdit}>
+            수정 취소
+          </EditCancleBtn>
+        </Form>
+      )}
+      {!isNameEdit ? <EditBtn onClick={toggleNameEdit}>이름 편집</EditBtn> : null}
       <Tweets>
         {tweets.map((tweet) => (
           <Tweet key={tweet.id} {...tweet} />
